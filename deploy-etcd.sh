@@ -4,9 +4,11 @@ VERSION=v3.3.13
 
 source ./cluster-info
 
-mkdir ./etcd-config
-rm ./etcd-config/pki -rf
-cd ./etcd-config
+dir_local=`pwd`
+
+mkdir ~/.etcd-config
+rm ~/.etcd-config/pki -rf
+cd ~/.etcd-config
 
 mkdir pki
 
@@ -110,7 +112,7 @@ ip=k8s-master-${i}.cloud.worken.net
 ssh $ip "rm /etc/etcd/* -rf; mkdir /var/lib/etcd/ -p; mkdir -p /etc/etcd/pki; mkdir /data1/etcd-data -p; rm /var/lib/etcd/* -rf; rm /data1/etcd-data/* -rf"
 scp etcd-$VERSION $ip:/usr/local/bin/etcd
 scp etcd.service   		   $ip:/usr/lib/systemd/system/etcd.service
-scp ../install-etcd-config.sh         $ip:/etc/etcd/install-etcd-config.sh
+scp $dir_local/install-etcd-config.sh         $ip:/etc/etcd/install-etcd-config.sh
 scp pki/ca.crt     		   $ip:/etc/etcd/pki/ca.crt
 scp pki/etcd.crt   		   $ip:/etc/etcd/pki/etcd.crt
 scp pki/etcd.key   		   $ip:/etc/etcd/pki/etcd.key
