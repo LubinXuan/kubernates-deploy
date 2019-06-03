@@ -20,7 +20,7 @@ NODE_LST=
 #define master node
 for i in $(seq 1 3)
 do
-        NODE_LST=$NODE_LST"""DNS.$i = k8s-master-$i.cloud.worken.net
+        NODE_LST=$NODE_LST"""DNS.$i = k8s-master-$i
 """
 done
 #define worker node
@@ -108,21 +108,17 @@ fi
 #deploy etcd master
 for i in $(seq 1 3)
 do
-ip=k8s-master-${i}.cloud.worken.net
-ssh $ip "rm /etc/etcd/* -rf; mkdir /var/lib/etcd/ -p; mkdir -p /etc/etcd/pki; mkdir /data1/etcd-data -p; rm /var/lib/etcd/* -rf; rm /data1/etcd-data/* -rf"
+ip=k8s-master-${i}
+ssh $ip "systemctl stop etcd; rm /etc/etcd/* -rf;mkdir -p /etc/etcd/pki;"
 scp etcd-$VERSION $ip:/usr/local/bin/etcd
 scp etcd.service   		   $ip:/usr/lib/systemd/system/etcd.service
-scp $dir_local/install-etcd-config.sh         $ip:/etc/etcd/install-etcd-config.sh
+scp $dir_local/install-etcd.sh         $ip:/etc/etcd/install-etcd.sh
 scp pki/ca.crt     		   $ip:/etc/etcd/pki/ca.crt
 scp pki/etcd.crt   		   $ip:/etc/etcd/pki/etcd.crt
 scp pki/etcd.key   		   $ip:/etc/etcd/pki/etcd.key
 
 ssh $ip "
-  sh /etc/etcd/install-etcd-config.sh $i
-  systemctl daemon-reload
-  systemctl enable etcd
-  systemctl start etcd
-  systemctl status etcd
+  sh /etc/etcd/install-etcd.sh $i
 "
 done
 exit 0

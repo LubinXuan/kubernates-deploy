@@ -36,4 +36,13 @@ ETCD_PEER_KEY_FILE=/etc/etcd/pki/etcd.key
 # [Profiling flags]
 # ETCD_METRICS={{ etcd_metrics }}
 EOF
-cat /etc/etcd/etcd.conf
+
+mkdir /var/lib/etcd/ -p; 
+mkdir /data1/etcd-data -p; 
+rm /var/lib/etcd/* -rf; 
+rm /data1/etcd-data/* -rf
+
+systemctl daemon-reload
+systemctl enable etcd
+systemctl start etcd
+systemctl status etcd

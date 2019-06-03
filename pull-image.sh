@@ -11,6 +11,10 @@ function pull()
 #	docker rmi $3/$1:$2
 }
 
+pull metrics-server-amd64 v0.3.3 mirrorgooglecontainers
+
+pull kubernetes-dashboard v1.10.1 registry.cn-hangzhou.aliyuncs.com/xuanlb
+
 pull flannel v0.11.0-amd64 quay.io/coreos
 pull pause 3.1 mirrorgooglecontainers
 pull coredns 1.3.1 coredns

@@ -10,6 +10,11 @@ for i in 1 2;do
       rm ~/.kube -rf;
       mkdir -p /etc/kubernetes/pki/etcd;
       mkdir -p ~/.kube/; 
-      ipvsadm --clear
+      ipvsadm --clear;
+      ifconfig cni0 down;
+      ifconfig flannel.1 down;
+      ifconfig docker0 down;
+      ip link delete flannel.1;
+      ip link delete cni0;
   "
 done

@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: net-tools
+  namespace: default
+spec:
+  template:
+    metadata:
+      labels:
+        name: net-tools
+    spec:
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: net-tools
+        image: slongstreet/bind-utils
+        command:
+         - sleep
+         - "36000000"
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always

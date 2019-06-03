@@ -63,7 +63,7 @@ STATE=("MASTER" "BACKUP" "BACKUP")
 HEALTH_CHECK=""
 for index in 0 1 2; do
   HEALTH_CHECK=${HEALTH_CHECK}"""
-    real_server ${IPS[$index]} 6443 {
+    real_server ${IPS[$index]} 8443 {
         weight 1
         SSL_GET {
             url {
@@ -78,12 +78,67 @@ for index in 0 1 2; do
 """
 done
 
+
+cat > ~/ikube/haproxy.cfg << EOF
+global
+    log         127.0.0.1 local2
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+    stats socket /var/lib/haproxy/stats
+
+defaults
+    mode                    tcp
+    log                     global
+    option                  tcplog
+    option                  dontlognull
+    option                  redispatch
+    retries                 3
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout check           10s
+    maxconn                 3000
+
+listen stats
+    mode   http
+    bind :10086
+    stats   enable
+    stats   uri     /admin?stats
+    stats   auth    admin:admin
+    stats   admin   if TRUE
+    
+frontend  k8s_https *:8443
+    mode      tcp
+    maxconn      2000
+    default_backend     https_sri
+    
+backend https_sri
+    balance      roundrobin
+    server master1-api ${IPS[0]}:6443  check inter 10000 fall 2 rise 2 weight 1
+    server master2-api ${IPS[1]}:6443  check inter 10000 fall 2 rise 2 weight 1
+    server master3-api ${IPS[2]}:6443  check inter 10000 fall 2 rise 2 weight 1
+EOF
+
+cat > ~/ikube/check_haproxy.sh << EOF
+#!/bin/bash
+A=\`ps -C haproxy --no-header |wc -l\`
+if [ \$A -eq 0 ];then
+/etc/init.d/keepalived stop
+fi
+EOF
+
+
 for index in 0 1 2; do
   ip=${IPS[${index}]}
   echo "install "$ip
-  echo """
+  cat > ~/ikube/keepalived-${index}.conf << EOF
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_DEVEL_${index}
 }
 vrrp_instance VI_1 {
     state ${STATE[${index}]}
@@ -99,7 +154,7 @@ vrrp_instance VI_1 {
         ${VIP}
     }
 }
-virtual_server ${VIP} 6443 {
+virtual_server ${VIP} 8443 {
     delay_loop 6
     lb_algo loadbalance
     lb_kind DR
@@ -108,18 +163,20 @@ virtual_server ${VIP} 6443 {
     protocol TCP
 ${HEALTH_CHECK}
 }
-""" > ~/ikube/keepalived-${index}.conf
+EOF
+  scp ~/ikube/haproxy.cfg ${ip}:/etc/haproxy/
+  scp ~/ikube/check_haproxy.sh ${ip}:/etc/keepalived/
   scp ~/ikube/keepalived-${index}.conf ${ip}:/etc/keepalived/keepalived.conf
-
   ssh ${ip} "
-    systemctl stop keepalived
+    systemctl enable haproxy
+    systemctl restart haproxy
     systemctl enable keepalived
-    systemctl start keepalived"
+    systemctl restart keepalived"
 done
 
 for index in 0 1 2;do
   ip=${IPS[${index}]}
-  echo "分发etcd证书--->"$ip
+  echo "清理k8s环境--->"$ip
   ssh $ip "
       kubeadm reset -f;
       rm -rf /var/lib/cni;
@@ -129,8 +186,14 @@ for index in 0 1 2;do
       rm ~/.kube -rf;
       mkdir -p /etc/kubernetes/pki/etcd;
       mkdir -p ~/.kube/; 
-      ipvsadm --clear
+      ipvsadm --clear;
+      ifconfig cni0 down;
+      ifconfig flannel.1 down;
+      ifconfig docker0 down;
+      ip link delete flannel.1;
+      ip link delete cni0;
   "
+  echo "分发etcd证书--->"$ip
   scp ~/.etcd-config/pki/ca.crt $ip:/etc/kubernetes/pki/etcd/ca.crt
   scp ~/.etcd-config/pki/etcd.crt $ip:/etc/kubernetes/pki/etcd/etcd.crt
   scp ~/.etcd-config/pki/etcd.key $ip:/etc/kubernetes/pki/etcd/etcd.key
@@ -143,16 +206,14 @@ kind: ClusterConfiguration
 kubernetesVersion: v1.14.2
 imageRepository: hub.worken.cn
 certificatesDir: /etc/kubernetes/pki
-controlPlaneEndpoint: "${VIP}:6443"
-dns:
-  type: CoreDNS
+controlPlaneEndpoint: "${VIP}:8443"
+clusterName: hkdw-k8s
 apiServer:
   certSANs:
   - ${VIP}
 networking:
-  # This CIDR is a Calico default. Substitute or remove for your CNI provider.
   dnsDomain: cluster.local
-  podSubnet: 10.1.0.0/16
+  podSubnet: 10.244.0.0/16
   serviceSubnet: ${CIDR}
 controllerManager:
   extraArgs:
@@ -163,16 +224,24 @@ scheduler:
 etcd:
   external:
     endpoints:
-    - https://k8s-master-1.cloud.worken.net:2379
-    - https://k8s-master-2.cloud.worken.net:2379
-    - https://k8s-master-3.cloud.worken.net:2379
+    - https://k8s-master-1:2379
+    - https://k8s-master-2:2379
+    - https://k8s-master-3:2379
     caFile: /etc/kubernetes/pki/etcd/ca.crt
     certFile: /etc/kubernetes/pki/etcd/etcd.crt
     keyFile: /etc/kubernetes/pki/etcd/etcd.key
+dns:
+   type: CoreDNS
+   imageRepository: coredns
+   imageTag: 1.5.0
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
 mode: ipvs
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
 """ > /etc/kubernetes/kubeadm-config.yaml
 
 
@@ -181,8 +250,7 @@ kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
 mkdir -p $HOME/.kube
 cp -f /etc/kubernetes/admin.conf ${HOME}/.kube/config
 
-kubectl apply -f kube-flannel.yml
-kubectl apply -f kube-dash.yml
+kubectl apply -f addon/
 
 JOIN_CMD=`kubeadm token create --print-join-command`
 

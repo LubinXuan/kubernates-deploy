@@ -1,0 +1,105 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: prometheus-blackbox-exporter
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: prometheus-blackbox-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: prometheus-blackbox-exporter
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: prometheus-blackbox-exporter
+        image: prom/blackbox-exporter:v0.14.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: blackbox-port
+          containerPort: 9115
+        readinessProbe:
+          tcpSocket:
+            port: 9115
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: 50Mi
+            cpu: 100m
+          limits:
+            memory: 60Mi
+            cpu: 200m
+        volumeMounts:
+        - name: config
+          mountPath: /etc/blackbox_exporter
+        args:
+        - --config.file=/etc/blackbox_exporter/blackbox.yml
+        - --log.level=debug
+        - --web.listen-address=:9115
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-blackbox-exporter
+      nodeSelector:
+        node-role.kubernetes.io/master: "true"
+#      tolerations:
+#      - key: "node-role.kubernetes.io/master"
+#        effect: "NoSchedule"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: prometheus-blackbox-exporter
+  name: prometheus-blackbox-exporter
+  namespace: kube-system
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  selector:
+    app: prometheus-blackbox-exporter
+  ports:
+  - name: blackbox
+    port: 9115
+    targetPort: 9115
+    protocol: TCP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: prometheus-blackbox-exporter
+  name: prometheus-blackbox-exporter
+  namespace: kube-system
+data:
+  blackbox.yml: |-
+    modules:
+      http_2xx:
+        prober: http
+        timeout: 10s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2"]
+          valid_status_codes: []
+          method: GET
+          preferred_ip_protocol: "ip4"
+      http_post_2xx: # http post 监测模块
+        prober: http
+        timeout: 10s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2"]
+          method: POST
+          preferred_ip_protocol: "ip4"
+      tcp_connect:
+        prober: tcp
+        timeout: 10s
+      icmp:
+        prober: icmp
+        timeout: 10s
+        icmp:
+          preferred_ip_protocol: "ip4"

@@ -62,14 +62,14 @@ rules:
   resourceNames: ["kubernetes-dashboard-settings"]
   verbs: ["get", "update"]
   # Allow Dashboard to get metrics from heapster.
-- apiGroups: [""]
-  resources: ["services"]
-  resourceNames: ["heapster"]
-  verbs: ["proxy"]
-- apiGroups: [""]
-  resources: ["services/proxy"]
-  resourceNames: ["heapster", "http:heapster:", "https:heapster:"]
-  verbs: ["get"]
+#- apiGroups: [""]
+#  resources: ["services"]
+#  resourceNames: ["heapster"]
+#  verbs: ["proxy"]
+#- apiGroups: [""]
+#  resources: ["services/proxy"]
+#  resourceNames: ["heapster", "http:heapster:", "https:heapster:"]
+#  verbs: ["get"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -109,7 +109,7 @@ spec:
     spec:
       containers:
       - name: kubernetes-dashboard
-        image: hub.worken.cn/kubernetes-dashboard:v1.10.0
+        image: hub.worken.cn/kubernetes-dashboard:v1.10.1
         ports:
         - containerPort: 8443
           protocol: TCP
@@ -118,8 +118,8 @@ spec:
           # Uncomment the following line to manually specify Kubernetes API server Host
           # If not specified, Dashboard will attempt to auto discover the API server and connect
           # to it. Uncomment only if the default does not work.
-          - --authentication-mode=basic
-          #- --apiserver-host=http://192.168.20.12:8080
+          #- --authentication-mode=basic
+          #- --apiserver-host=https://192.168.20.252:8443
         volumeMounts:
         - name: kubernetes-dashboard-certs
           mountPath: /certs
@@ -158,7 +158,30 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 443
+    - name: web-ui
+      port: 443
       targetPort: 8443
   selector:
     k8s-app: kubernetes-dashboard
+
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kubernetes-dashboard
+  namespace: kube-system
+  annotations:
+    traefik.protocol: https
+    traefik.frontend.entryPoints: https
+spec:
+  tls:
+  - secretName: secret-ca-k8s-worken-net
+  rules:
+  - host: dash.k8s.worken.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kubernetes-dashboard
+          servicePort: web-ui

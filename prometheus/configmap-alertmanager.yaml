@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager
+  namespace: kube-system
+data:
+  config.yml: |-
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: web-hook-server
+      group_by: ['alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 15m
+      routes:
+      - receiver: web-hook-server
+    receivers:
+    - name: web-hook-server
+      webhook_configs:
+      - url: 'http://alert-server.kube-system:8080/alert/prometheus'
+        send_resolved: true
+
