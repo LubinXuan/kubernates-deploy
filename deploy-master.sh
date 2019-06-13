@@ -165,7 +165,6 @@ ${HEALTH_CHECK}
 }
 EOF
   scp ~/ikube/haproxy.cfg ${ip}:/etc/haproxy/
-  scp ~/ikube/check_haproxy.sh ${ip}:/etc/keepalived/
   scp ~/ikube/keepalived-${index}.conf ${ip}:/etc/keepalived/keepalived.conf
   ssh ${ip} "
     systemctl enable haproxy

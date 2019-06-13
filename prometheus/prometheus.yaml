@@ -60,9 +60,9 @@ spec:
           path: /usr/share/zoneinfo/Asia/Shanghai
       nodeSelector:
         node-role.kubernetes.io/master: "true"
-#      tolerations:
-#      - key: "node-role.kubernetes.io/master"
-#        effect: "NoSchedule"
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        effect: "NoSchedule"
 ---
 apiVersion: v1
 kind: Service

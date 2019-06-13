@@ -94,6 +94,8 @@ spec:
       tolerations:
       - operator: Exists
         effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
       serviceAccountName: flannel
       initContainers:
       - name: install-cni

@@ -28,6 +28,11 @@ spec:
       terminationGracePeriodSeconds: 60
       restartPolicy: Always
       serviceAccountName: ingress
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
       volumes:
       - name: config
         configMap:
@@ -54,6 +59,10 @@ spec:
         - --kubernetes
         - --logLevel=DEBUG
         - --configfile=/config/traefik.toml
+        - --web.metrics
+        - --web.metrics.prometheus
+        - --api
+        - --metrics.prometheus
         volumeMounts:
         - mountPath: "/config"
           name: "config"

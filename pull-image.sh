@@ -11,6 +11,8 @@ function pull()
 #	docker rmi $3/$1:$2
 }
 
+pull fluentd-elasticsearch v2.4.0 mirrorgooglecontainers
+
 pull metrics-server-amd64 v0.3.3 mirrorgooglecontainers
 
 pull kubernetes-dashboard v1.10.1 registry.cn-hangzhou.aliyuncs.com/xuanlb
