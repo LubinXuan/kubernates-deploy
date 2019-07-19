@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-es-v2.4.0
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-es
+    version: v2.4.0
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluentd-es
+      version: v2.4.0
+  template:
+    metadata:
+      labels:
+        k8s-app: fluentd-es
+        version: v2.4.0
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: fluentd-es
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
+      containers:
+      - name: fluentd-es
+        image: hub.worken.cn/fluentd-elasticsearch:v2.4.0
+        env:
+        - name: FLUENTD_ARGS
+          value: --no-supervisor -q -vv
+        resources:
+          limits:
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: varlibdockercontainers
+          mountPath: /data1/docker-data/containers
+          readOnly: true
+        - name: config-volume
+          mountPath: /etc/fluent/config.d
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /data1/docker-data/containers
+      - name: config-volume
+        configMap:
+          name: fluentd-es-config-v0.2.0

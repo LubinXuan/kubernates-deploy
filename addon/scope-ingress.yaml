@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: scope-app-ui
+  namespace: weave
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    #ingress.kubernetes.io/auth-type: forward
+    #ingress.kubernetes.io/auth-secret: authsecret
+    #ingress.kubernetes.io/auth-header-field: X-WebAuth-User
+    #ingress.kubernetes.io/auth-url: http://192.168.0.194:8080/auth
+    #ingress.kubernetes.io/auth-trust-headers: "true"
+    #ingress.kubernetes.io/auth-response-headers: X-Auth-User, X-Secret
+    #ingress.kubernetes.io/auth-tls-insecure: "true"
+    ingress.kubernetes.io/whitelist-x-forwarded-for: "true"
+    traefik.ingress.kubernetes.io/whitelist-source-range: "192.168.0.0/24,192.168.20.0/24"
+
+spec:
+  rules:
+  - host: weave.worken.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: weave-scope-app
+          servicePort: app

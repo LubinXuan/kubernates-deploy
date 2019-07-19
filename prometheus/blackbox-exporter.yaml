@@ -2,7 +2,6 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: prometheus-blackbox-exporter
-  namespace: kube-system
 spec:
   selector:
     matchLabels:
@@ -46,9 +45,9 @@ spec:
           name: prometheus-blackbox-exporter
       nodeSelector:
         node-role.kubernetes.io/master: "true"
-#      tolerations:
-#      - key: "node-role.kubernetes.io/master"
-#        effect: "NoSchedule"
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        effect: "NoSchedule"
 
 ---
 apiVersion: v1
@@ -57,7 +56,6 @@ metadata:
   labels:
     app: prometheus-blackbox-exporter
   name: prometheus-blackbox-exporter
-  namespace: kube-system
   annotations:
     prometheus.io/scrape: 'true'
 spec:
@@ -76,7 +74,6 @@ metadata:
   labels:
     app: prometheus-blackbox-exporter
   name: prometheus-blackbox-exporter
-  namespace: kube-system
 data:
   blackbox.yml: |-
     modules:

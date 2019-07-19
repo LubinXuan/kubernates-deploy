@@ -2,7 +2,6 @@ apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   name: prometheus-node-exporter
-  namespace: kube-system
   labels:
     app: prometheus-node-exporter
 spec:
@@ -37,7 +36,6 @@ metadata:
     prometheus.io/app-metrics: 'true'
     prometheus.io/app-metrics-path: '/metrics'
   name: prometheus-node-exporter
-  namespace: kube-system
   labels:
     app: prometheus-node-exporter
 spec:
