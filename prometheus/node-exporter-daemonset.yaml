@@ -23,6 +23,9 @@ spec:
       tolerations:
       - key: "node-role.kubernetes.io/master"
         effect: "NoSchedule"
+      - key: "web-front"
+        operator: Exists
+        effect: "NoExecute"
       hostNetwork: true
       hostPID: true
       hostIPC: true

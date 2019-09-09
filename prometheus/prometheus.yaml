@@ -13,14 +13,6 @@ spec:
         app: prometheus
     spec:
       serviceAccountName: prometheus
-#      hostNetwork: true
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: "kubernetes.io/prometheus"
-                operator: Exists
       containers:
       - name: prometheus
         image: prom/prometheus:v2.9.2
@@ -30,7 +22,7 @@ spec:
           - '--storage.tsdb.retention=1d'
           - '--config.file=/etc/prometheus/prometheus.yaml'
           - '--web.enable-lifecycle'
-          - '--web.external-url=http://prometheus.worken.cn'
+          - '--web.external-url=http://prometheus.k8s.worken.cn'
         ports:
         - name: webui
           containerPort: 9090
@@ -64,9 +56,19 @@ spec:
       - name: tz-config
         hostPath:
           path: /usr/share/zoneinfo/Asia/Shanghai
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "kubernetes.io/prometheus"
+                operator: "Exists"
       tolerations:
       - key: "node-role.kubernetes.io/master"
         effect: "NoSchedule"
+      - key: "web-front"
+        operator: Exists
+        effect: "NoExecute"
 ---
 apiVersion: v1
 kind: Service
@@ -83,3 +85,18 @@ spec:
       protocol: TCP
   selector:
     app: prometheus
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: prometheus-igress
+spec:
+  rules:
+  - host: prometheus.k8s.worken.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: prometheus
+          servicePort: webui

@@ -43,8 +43,13 @@ spec:
       - name: config
         configMap:
           name: prometheus-blackbox-exporter
-      nodeSelector:
-        node-role.kubernetes.io/master: "true"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: node-role.kubernetes.io/master
+                  operator: Exists
       tolerations:
       - key: "node-role.kubernetes.io/master"
         effect: "NoSchedule"

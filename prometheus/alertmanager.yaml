@@ -35,6 +35,13 @@ spec:
           mountPath: /alertmanager
         - name: tz-config
           mountPath: /etc/localtime
+        resources:
+          requests:
+            memory: 50Mi
+            cpu: 100m
+          limits:
+            memory: 300Mi
+            cpu: 800m
       volumes:
       - name: config-volume
         configMap:
@@ -47,8 +54,13 @@ spec:
       - name: tz-config
         hostPath:
          path: /usr/share/zoneinfo/Asia/Shanghai
-      nodeSelector:
-        node-role.kubernetes.io/master: "true"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: node-role.kubernetes.io/master
+                  operator: Exists
       tolerations:
       - key: "node-role.kubernetes.io/master"
         effect: "NoSchedule"
@@ -69,3 +81,18 @@ spec:
     protocol: TCP
     port: 9093
     targetPort: 9093
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: alertmanager-igress
+spec:
+  rules:
+  - host: alertmanager.k8s.worken.net
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: alertmanager
+          servicePort: alertmanager

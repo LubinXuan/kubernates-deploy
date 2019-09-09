@@ -173,6 +173,13 @@ items:
               env: []
               image: 'docker.io/weaveworks/scope:1.11.2'
               imagePullPolicy: IfNotPresent
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 100Mi
+                limits:
+                  memory: 1024Mi
+                  cpu: 1000m
               ports:
                 - containerPort: 4040
                   protocol: TCP
@@ -253,6 +260,9 @@ items:
                 requests:
                   cpu: 100m
                   memory: 100Mi
+                limits:
+                  memory: 200Mi
+                  cpu: 500m
           serviceAccountName: weave-scope
   - apiVersion: extensions/v1beta1
     kind: DaemonSet
@@ -302,6 +312,9 @@ items:
                 requests:
                   cpu: 100m
                   memory: 100Mi
+                limits:
+                  memory: 200Mi
+                  cpu: 500m
               securityContext:
                 privileged: true
               volumeMounts:
